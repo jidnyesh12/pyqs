@@ -27,7 +27,7 @@ import { Paper } from "@/types/paper";
 import FadeIn from "@/components/animations/FadeIn";
 import { toast } from "sonner";
 import PDFViewer from "@/components/pdf/PDFViewer";
-
+import { AnimatePresence } from "framer-motion";
 
 const SubjectPapersView = () => {
   const router = useRouter();
@@ -229,6 +229,13 @@ const SubjectPapersView = () => {
   const selectedPapersArray = useMemo(() => {
     return filteredPapers.filter((paper) => selectedPapers[paper.fileName]);
   }, [filteredPapers, selectedPapers]);
+
+  const previewIndex = previewPaper
+    ? filteredPapers.findIndex((paper) => paper.url === previewPaper.url)
+    : -1;
+  const hasPreviousPaper = previewIndex > 0;
+  const hasNextPaper =
+    previewIndex >= 0 && previewIndex < filteredPapers.length - 1;
 
   const toggleViewMode = () => {
     setViewMode((prev) => (prev === "grid" ? "list" : "grid"));
@@ -1220,35 +1227,26 @@ const SubjectPapersView = () => {
       {/* Batch download progress overlay */}
       {batchDownloadProgress && renderBatchDownloadProgress()}
 
-      {/* PDF Preview Viewer with Prev/Next handlers */}
-      {previewPaper && (
-        (() => {
-          const currentIndex = filteredPapers.findIndex(
-            (p) => p.fileName === previewPaper.fileName
-          );
-          const hasPrev = currentIndex > 0;
-          const hasNext = currentIndex >= 0 && currentIndex < filteredPapers.length - 1;
-
-          const goPrev = () => {
-            if (!hasPrev) return;
-            setPreviewPaper(filteredPapers[currentIndex - 1]);
-          };
-
-          const goNext = () => {
-            if (!hasNext) return;
-            setPreviewPaper(filteredPapers[currentIndex + 1]);
-          };
-
-          return (
-            <PDFViewer
-              paper={previewPaper}
-              onClose={() => setPreviewPaper(null)}
-              onPrev={hasPrev ? goPrev : undefined}
-              onNext={hasNext ? goNext : undefined}
-            />
-          );
-        })()
-      )}
+      <AnimatePresence>
+        {previewPaper && (
+          <PDFViewer
+            key="pdf-viewer"
+            paper={previewPaper}
+            onClose={() => setPreviewPaper(null)}
+            onFailure={recordFailure}
+            onPrev={
+              hasPreviousPaper
+                ? () => setPreviewPaper(filteredPapers[previewIndex - 1])
+                : undefined
+            }
+            onNext={
+              hasNextPaper
+                ? () => setPreviewPaper(filteredPapers[previewIndex + 1])
+                : undefined
+            }
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
